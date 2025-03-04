@@ -1,114 +1,115 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useState, useEffect } from 'react';
+import Head from 'next/head';
+import ChatBot from '../components/ChatBot';
+import BuildDisplay from '../components/BuildDisplay';
 
 export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              pages/index.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [currentBuild, setCurrentBuild] = useState(null);
+  const [activeView, setActiveView] = useState('chat'); // 'chat' or 'build'
+  const [isMobile, setIsMobile] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Detect if we're on mobile when component mounts
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
+  const handleBuildDataReceived = (buildData) => {
+    console.log('Build received from creator:', buildData);
+    setCurrentBuild(buildData);
+    // Automatically switch to build view when a new build is created (on mobile)
+    if (isMobile) {
+      setActiveView('build');
+    }
+  };
+
+  const toggleView = () => {
+    setActiveView(activeView === 'chat' ? 'build' : 'chat');
+  };
+
+  return (
+    <div className="h-screen overflow-hidden bg-gray-900">
+      <Head>
+        <title>NBA 2K25 Build Creator</title>
+        <meta name="description" content="Create optimized NBA 2K25 player builds for any position and playstyle" />
+        <link rel="icon" href="/favicon.ico" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style jsx global>{`
+          @keyframes shimmer {
+            100% {
+              transform: translateX(100%);
+            }
+          }
+          
+          .animate-shimmer {
+            animation: shimmer 2s infinite;
+          }
+          
+          @keyframes ping {
+            75%, 100% {
+              transform: scale(1.5);
+              opacity: 0;
+            }
+          }
+          
+          .animate-ping {
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+          }
+        `}</style>
+      </Head>
+
+      <main className="h-full flex flex-col">
+        {/* Mobile View Toggle - only visible on mobile */}
+        <div className="md:hidden flex justify-center py-2 bg-gray-800 border-b border-gray-700">
+          <div className="inline-flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              onClick={() => setActiveView('chat')}
+              className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+                activeView === 'chat'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView('build')}
+              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+                activeView === 'build'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Build View
+            </button>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 container mx-auto px-4 py-2 flex flex-col md:flex-row gap-6 h-[calc(100%-40px)] md:h-[calc(100%-16px)] overflow-hidden">
+          {/* Chat section - full width on mobile when active, 3/5 width on desktop */}
+          <div className={`${activeView === 'chat' ? 'block' : 'hidden'} md:block w-full md:w-3/5 h-full overflow-hidden`}>
+            <ChatBot onBuildDataReceived={handleBuildDataReceived} />
+          </div>
+          
+          {/* Build display section - full width on mobile when active, 2/5 width on desktop */}
+          <div className={`${activeView === 'build' ? 'block' : 'hidden'} md:block w-full md:w-2/5 h-full overflow-hidden`}>
+            <BuildDisplay buildData={currentBuild} />
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
