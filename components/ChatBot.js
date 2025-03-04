@@ -194,58 +194,78 @@ This build is optimized for ${playStyle.toLowerCase()} playstyle. Check the side
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-800 shadow-xl rounded-lg border border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-700 bg-gradient-to-r from-blue-900 to-indigo-900 rounded-t-lg">
+    <div className="h-full flex flex-col bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-lg overflow-hidden animate-pulse-border">
+      {/* Chat Header */}
+      <div className="px-4 py-4 border-b border-gray-700/70 bg-gradient-to-r from-blue-900 to-indigo-900 rounded-t-lg shadow-md">
         <h3 className="text-lg font-semibold text-white flex items-center">
-          <span className="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></span>
-          NBA 2K25 Build Assistant
+          <span className="w-3 h-3 bg-green-500 rounded-full inline-block mr-2 animate-pulse"></span>
+          NBA 2K25 Build Creator
         </h3>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-3 bg-gradient-to-b from-gray-800 to-gray-900">
-        {messages.map((message, index) => (
-          <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] sm:max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl p-2 sm:p-3 rounded-lg shadow-md backdrop-blur-sm ${
-              message.role === 'user' 
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border border-blue-500' 
-                : 'bg-gradient-to-r from-gray-800/90 to-gray-900/90 text-gray-100 border border-gray-700'
-            }`}>
-              {message.role === 'assistant' && (
-                <div className="w-full h-0.5 bg-gradient-to-r from-blue-400 to-indigo-500 mb-2 rounded-full"></div>
-              )}
-              <div className="whitespace-pre-wrap text-sm sm:text-base" 
-                   dangerouslySetInnerHTML={{ 
-                     __html: message.content
-                       .replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-300">$1</strong>')
-                       .replace(/\n/g, '<br />')
-                       .replace(/# (.*?)$/gm, '<h1 class="text-lg font-bold text-blue-300 mt-1 mb-2">$1</h1>')
-                       .replace(/## (.*?)$/gm, '<h2 class="text-md font-semibold text-blue-200 mt-1 mb-2">$1</h2>')
-                   }} />
-              {message.role === 'assistant' && (
-                <div className="w-full h-0.5 bg-gradient-to-r from-indigo-500 to-blue-400 mt-2 rounded-full"></div>
-              )}
+      {/* Chat messages container */}
+      <div className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-gray-800">
+        <div className="space-y-4">
+          {messages.map((message, index) => (
+            <div 
+              key={index} 
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div 
+                className={`max-w-[85%] rounded-2xl p-3 sm:p-4 ${
+                  message.role === 'user' 
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white' 
+                    : 'bg-gradient-to-br from-gray-700 via-gray-750 to-gray-800 text-gray-100 border border-gray-600/50'
+                } shadow-md transform transition-transform duration-300 hover:scale-[1.01]`}
+              >
+                {message.content.includes('#') || message.content.includes('**') ? (
+                  <div className="prose prose-invert max-w-none">
+                    {message.content.split('\n').map((line, i) => {
+                      if (line.startsWith('# ')) {
+                        return <h1 key={i} className="text-xl font-bold mt-0 mb-2 text-blue-300">{line.replace('# ', '')}</h1>;
+                      } else if (line.startsWith('## ')) {
+                        return <h2 key={i} className="text-lg font-bold mt-3 mb-2 text-blue-300">{line.replace('## ', '')}</h2>;
+                      } else if (line.startsWith('**') && line.endsWith('**')) {
+                        return <p key={i} className="font-semibold my-1">{line.replace(/\*\*/g, '')}</p>;
+                      } else if (line.startsWith('**')) {
+                        const parts = line.split('**');
+                        return (
+                          <p key={i} className="my-1">
+                            <span className="font-semibold">{parts[1]}</span> 
+                            {parts[2]}
+                          </p>
+                        );
+                      } else {
+                        return <p key={i} className="my-1">{line}</p>;
+                      }
+                    })}
+                  </div>
+                ) : (
+                  <div>{message.content}</div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
       
-      <form onSubmit={handleSubmit} className="p-2 sm:p-4 border-t border-gray-700 bg-gray-800 rounded-b-lg">
-        <div className="flex relative">
+      <form onSubmit={handleSubmit} className="p-3 sm:p-4 bg-gradient-to-r from-gray-800 to-gray-900 border-t border-gray-700/50">
+        <div className="relative flex items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe your build..."
-            className="flex-1 bg-gray-700 text-white rounded-l-lg px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 pl-10"
+            placeholder={loading ? "Generating response..." : "Describe your ideal player build..."}
+            className="flex-1 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-l-xl px-4 py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600/70 pl-10 shadow-inner"
             disabled={loading}
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-            <span className="w-4 h-4 bg-blue-500 rounded-full inline-block animate-pulse"></span>
+            <span className={`w-4 h-4 bg-blue-500 rounded-full inline-block ${loading ? 'animate-pulse' : 'animate-float'}`}></span>
           </div>
           <button
             type="submit"
-            className={`bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-r-lg font-medium text-sm sm:text-base relative overflow-hidden ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-700 hover:to-indigo-800'}`}
+            className={`bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 sm:px-6 py-3 rounded-r-xl font-medium text-sm sm:text-base relative overflow-hidden shadow-lg ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:from-blue-700 hover:to-indigo-800 hover:shadow-blue-700/20 transition-all duration-300'}`}
             disabled={loading}
           >
             {loading ? (

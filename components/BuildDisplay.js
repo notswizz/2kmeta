@@ -163,22 +163,228 @@ export default function BuildDisplay({ buildData }) {
 
   if (!buildData) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gray-800 text-white border border-gray-700 rounded-lg shadow-xl">
-        <div className="text-center mb-6">
-          <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-blue-300">No Build Selected</h3>
-          <p className="text-sm sm:text-base text-gray-300">
-            Ask the chatbot to create a player build for you. Try prompts like:
-          </p>
-          <p className="mt-3 text-sm sm:text-base text-blue-400 italic">
-            "Create a shooting guard build with good defense"
-          </p>
-          <p className="mt-2 text-sm sm:text-base text-blue-400 italic">
-            "Make me a point guard that can shoot and dunk"
-          </p>
-          <p className="mt-2 text-sm sm:text-base text-blue-400 italic">
-            "What's a good build for a 7-foot center?"
-          </p>
-        </div>
+      <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-5 space-y-5 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-lg animate-pulse-border">
+        {!buildData ? (
+          // Empty state
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 animate-float flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-blue-300 mb-2">No Build Created Yet</h3>
+            <p className="text-gray-400 text-center max-w-sm">
+              Use the chat to describe your ideal player and I'll create an optimized build for you.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Build Header with Name and Position */}
+            <div className="bg-gradient-to-r from-blue-900/70 to-indigo-900/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-blue-800/40 transform transition-transform duration-300 hover:scale-[1.01]">
+              <div className="flex justify-between items-start mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">{buildData.buildName || "Custom Build"}</h2>
+                <div className="px-3 py-1 bg-blue-700/70 text-white text-sm font-semibold rounded-full border border-blue-600/40 shadow">
+                  {buildData.position || "Position"}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-1">
+                {determineArchetypes().map(archetype => (
+                  <span 
+                    key={archetype}
+                    className="px-2.5 py-1 bg-gradient-to-r from-indigo-700/70 to-indigo-900/70 rounded-lg text-xs text-white border border-indigo-600/40 shadow"
+                  >
+                    {archetype}
+                  </span>
+                ))}
+              </div>
+              
+              <div className="mt-3 text-gray-300 text-sm">
+                {generateBuildDescription()}
+              </div>
+            </div>
+          
+            {/* Physical Stats */}
+            <div className="bg-gradient-to-br from-gray-700/70 to-gray-800/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-gray-600/40 transform transition-transform duration-300 hover:scale-[1.01]">
+              <h3 className="text-base sm:text-lg font-semibold text-blue-300 mb-3">Physical Profile</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex flex-col items-center bg-gray-800/80 rounded-xl p-3 border border-gray-700/50">
+                  <span className="text-xs text-gray-400 mb-1">Height</span>
+                  <span className="text-lg font-semibold text-white">{formatHeight(buildData.height)}</span>
+                </div>
+                <div className="flex flex-col items-center bg-gray-800/80 rounded-xl p-3 border border-gray-700/50">
+                  <span className="text-xs text-gray-400 mb-1">Weight</span>
+                  <span className="text-lg font-semibold text-white">{buildData.weight} lbs</span>
+                </div>
+                <div className="flex flex-col items-center bg-gray-800/80 rounded-xl p-3 border border-gray-700/50">
+                  <span className="text-xs text-gray-400 mb-1">Wingspan</span>
+                  <span className="text-lg font-semibold text-white">{formatWingspan(buildData.wingspan)}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Badges Section */}
+            <div className="bg-gradient-to-br from-gray-700/70 to-gray-800/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-gray-600/40 transform transition-transform duration-300 hover:scale-[1.01]">
+              <h3 className="text-base sm:text-lg font-semibold text-blue-300 mb-3">Badges</h3>
+              <div className="space-y-4">
+                {(() => {
+                  // Create a categorized structure for badges
+                  const badgeCategories = {
+                    'Finishing': [],
+                    'Shooting': [],
+                    'Playmaking': [],
+                    'Defense': [],
+                    'Other': []
+                  };
+                  
+                  // Process badges into categories
+                  Object.entries(buildData.badges || {}).forEach(([badgeName, badgeData]) => {
+                    // Check if it's a complex object with category or just a level string
+                    let category = 'Other';
+                    let level = 1;
+                    
+                    if (typeof badgeData === 'object' && badgeData !== null) {
+                      // Handle object format (from API)
+                      if (badgeData.category) {
+                        const cat = badgeData.category.charAt(0).toUpperCase() + badgeData.category.slice(1);
+                        if (badgeCategories[cat] !== undefined) {
+                          category = cat;
+                        } else if (cat === 'Inside Scoring') {
+                          category = 'Finishing';
+                        } else if (cat === 'Outside Scoring') {
+                          category = 'Shooting';
+                        }
+                      }
+                      
+                      // Get the level
+                      if (badgeData.level) {
+                        if (typeof badgeData.level === 'string') {
+                          // Convert string level to number
+                          switch (badgeData.level) {
+                            case 'Hall of Fame': level = 4; break;
+                            case 'Gold': level = 3; break;
+                            case 'Silver': level = 2; break;
+                            case 'Bronze': level = 1; break;
+                            default: level = 1;
+                          }
+                        } else {
+                          level = badgeData.level;
+                        }
+                      }
+                    } else if (typeof badgeData === 'string') {
+                      // Handle string format
+                      switch (badgeData) {
+                        case 'Hall of Fame': level = 4; break;
+                        case 'Gold': level = 3; break;
+                        case 'Silver': level = 2; break;
+                        case 'Bronze': level = 1; break;
+                        default: level = 1;
+                      }
+                    } else if (typeof badgeData === 'number') {
+                      // Direct number
+                      level = badgeData;
+                    }
+                    
+                    // Add to the appropriate category
+                    badgeCategories[category].push({
+                      name: badgeName,
+                      level: level
+                    });
+                  });
+                  
+                  // Sort badges by level within each category
+                  Object.keys(badgeCategories).forEach(category => {
+                    badgeCategories[category].sort((a, b) => b.level - a.level);
+                  });
+                  
+                  // Render categories that have badges
+                  return Object.entries(badgeCategories)
+                    .filter(([_, badges]) => badges.length > 0)
+                    .map(([category, categoryBadges]) => (
+                      <div key={category} className="bg-gray-800/80 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                        <h4 className="text-sm sm:text-base font-medium text-blue-300 mb-2">{category}</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {categoryBadges.map(badge => {
+                            // Badge level colors
+                            const levelColors = {
+                              1: "bg-gradient-to-r from-amber-800 to-amber-700 border-amber-700/70", // Bronze
+                              2: "bg-gradient-to-r from-slate-400 to-slate-500 border-slate-300/70", // Silver
+                              3: "bg-gradient-to-r from-yellow-500 to-yellow-600 border-yellow-400/70", // Gold
+                              4: "bg-gradient-to-r from-purple-600 to-purple-700 border-purple-500/70" // HoF (purple)
+                            };
+                            
+                            const levelNames = {
+                              1: "Bronze",
+                              2: "Silver",
+                              3: "Gold",
+                              4: "HoF"
+                            };
+                            
+                            const colorClass = levelColors[badge.level] || "bg-gradient-to-r from-gray-600 to-gray-700 border-gray-500/70";
+                            
+                            return (
+                              <div 
+                                key={badge.name} 
+                                className={`${colorClass} text-white text-xs rounded-lg px-2 py-1.5 border flex items-center justify-between shadow-md transform transition-transform duration-200 hover:scale-[1.02]`}
+                              >
+                                <span className="truncate">{badge.name}</span>
+                                <span className="ml-1 text-xs font-bold opacity-90">{levelNames[badge.level] || badge.level}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                })()}
+              </div>
+            </div>
+        
+            {/* Attributes Section with Mobile Optimization */}
+            <div className="bg-gradient-to-br from-gray-700/70 to-gray-800/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-gray-600/40 transform transition-transform duration-300 hover:scale-[1.01]">
+              <div className="flex justify-between items-center mb-3 sm:mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-blue-300">Attributes</h3>
+                <button 
+                  onClick={() => setShowAllAttributes(!showAllAttributes)}
+                  className="text-xs sm:text-sm bg-blue-800/60 hover:bg-blue-700/70 text-blue-300 border border-blue-700/40 rounded-lg px-3 py-1.5 transition-colors duration-200"
+                >
+                  {showAllAttributes ? 'Show Top Only' : 'Show All'}
+                </button>
+              </div>
+              
+              <div className="space-y-4 sm:space-y-5">
+                {Object.entries(attributeCategories).map(([category, attributes]) => {
+                  // Filter attributes that exist in buildData
+                  const categoryAttributes = attributes
+                    .filter(attr => buildData[attr] !== undefined)
+                    .sort((a, b) => buildData[b] - buildData[a]);
+                  
+                  // Skip category if no attributes exist
+                  if (categoryAttributes.length === 0) return null;
+                  
+                  // For non-full view, show only top 3 attributes per category
+                  const attrsToShow = showAllAttributes 
+                    ? categoryAttributes 
+                    : categoryAttributes.slice(0, 3);
+                  
+                  return (
+                    <div key={category} className="bg-gray-800/80 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                      <h4 className="text-sm sm:text-base font-medium text-blue-300 mb-3">{category}</h4>
+                      <div className="space-y-3">
+                        {attrsToShow.map(attr => 
+                          renderAttributeBar(formatAttributeName(attr), formatAttributeValue(buildData[attr]))
+                        )}
+                        {!showAllAttributes && categoryAttributes.length > 3 && (
+                          <div className="text-xs text-gray-400 text-right mt-2">
+                            +{categoryAttributes.length - 3} more attributes
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -188,209 +394,228 @@ export default function BuildDisplay({ buildData }) {
   const buildDescription = generateBuildDescription();
   
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-4 bg-gray-800 text-white border border-gray-700 rounded-lg shadow-xl">
-      {/* Build header with name and attributes */}
-      <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-700">
-        <div className="flex justify-between items-start">
-          <div className="w-full">
-            <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-indigo-300">
-              {buildData.buildName || 'Custom Build'}
-            </h2>
-            <div className="flex flex-wrap items-center mt-1 text-sm sm:text-base">
-              <span className="text-blue-400 font-medium mr-2">{buildData.position}</span>
-              <span className="text-gray-500 mr-1">|</span>
-              <span className="mr-2 text-gray-300">{formatHeight(buildData.height)}</span>
-              <span className="text-gray-500 mr-1">|</span>
-              <span className="mr-2 text-gray-300">{buildData.weight} lbs</span>
-              <span className="text-gray-500 mr-1">|</span>
-              <span className="mr-2 text-gray-300">{formatWingspan(buildData.wingspan)}</span>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-5 space-y-5 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-lg animate-pulse-border">
+      {!buildData ? (
+        // Empty state
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 animate-float flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-blue-300 mb-2">No Build Created Yet</h3>
+          <p className="text-gray-400 text-center max-w-sm">
+            Use the chat to describe your ideal player and I'll create an optimized build for you.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Build Header with Name and Position */}
+          <div className="bg-gradient-to-r from-blue-900/70 to-indigo-900/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-blue-800/40 transform transition-transform duration-300 hover:scale-[1.01]">
+            <div className="flex justify-between items-start mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-white">{buildData.buildName || "Custom Build"}</h2>
+              <div className="px-3 py-1 bg-blue-700/70 text-white text-sm font-semibold rounded-full border border-blue-600/40 shadow">
+                {buildData.position || "Position"}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-1">
+              {determineArchetypes().map(archetype => (
+                <span 
+                  key={archetype}
+                  className="px-2.5 py-1 bg-gradient-to-r from-indigo-700/70 to-indigo-900/70 rounded-lg text-xs text-white border border-indigo-600/40 shadow"
+                >
+                  {archetype}
+                </span>
+              ))}
+            </div>
+            
+            <div className="mt-3 text-gray-300 text-sm">
+              {generateBuildDescription()}
+            </div>
+          </div>
+        
+          {/* Physical Stats */}
+          <div className="bg-gradient-to-br from-gray-700/70 to-gray-800/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-gray-600/40 transform transition-transform duration-300 hover:scale-[1.01]">
+            <h3 className="text-base sm:text-lg font-semibold text-blue-300 mb-3">Physical Profile</h3>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col items-center bg-gray-800/80 rounded-xl p-3 border border-gray-700/50">
+                <span className="text-xs text-gray-400 mb-1">Height</span>
+                <span className="text-lg font-semibold text-white">{formatHeight(buildData.height)}</span>
+              </div>
+              <div className="flex flex-col items-center bg-gray-800/80 rounded-xl p-3 border border-gray-700/50">
+                <span className="text-xs text-gray-400 mb-1">Weight</span>
+                <span className="text-lg font-semibold text-white">{buildData.weight} lbs</span>
+              </div>
+              <div className="flex flex-col items-center bg-gray-800/80 rounded-xl p-3 border border-gray-700/50">
+                <span className="text-xs text-gray-400 mb-1">Wingspan</span>
+                <span className="text-lg font-semibold text-white">{formatWingspan(buildData.wingspan)}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Badges Section */}
+          <div className="bg-gradient-to-br from-gray-700/70 to-gray-800/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-gray-600/40 transform transition-transform duration-300 hover:scale-[1.01]">
+            <h3 className="text-base sm:text-lg font-semibold text-blue-300 mb-3">Badges</h3>
+            <div className="space-y-4">
+              {(() => {
+                // Create a categorized structure for badges
+                const badgeCategories = {
+                  'Finishing': [],
+                  'Shooting': [],
+                  'Playmaking': [],
+                  'Defense': [],
+                  'Other': []
+                };
+                
+                // Process badges into categories
+                Object.entries(badges).forEach(([badgeName, badgeData]) => {
+                  // Check if it's a complex object with category or just a level string
+                  let category = 'Other';
+                  let level = 1;
+                  
+                  if (typeof badgeData === 'object' && badgeData !== null) {
+                    // Handle object format (from API)
+                    if (badgeData.category) {
+                      const cat = badgeData.category.charAt(0).toUpperCase() + badgeData.category.slice(1);
+                      if (badgeCategories[cat] !== undefined) {
+                        category = cat;
+                      } else if (cat === 'Inside Scoring') {
+                        category = 'Finishing';
+                      } else if (cat === 'Outside Scoring') {
+                        category = 'Shooting';
+                      }
+                    }
+                    
+                    // Get the level
+                    if (badgeData.level) {
+                      if (typeof badgeData.level === 'string') {
+                        // Convert string level to number
+                        switch (badgeData.level) {
+                          case 'Hall of Fame': level = 4; break;
+                          case 'Gold': level = 3; break;
+                          case 'Silver': level = 2; break;
+                          case 'Bronze': level = 1; break;
+                          default: level = 1;
+                        }
+                      } else {
+                        level = badgeData.level;
+                      }
+                    }
+                  } else if (typeof badgeData === 'string') {
+                    // Handle string format
+                    switch (badgeData) {
+                      case 'Hall of Fame': level = 4; break;
+                      case 'Gold': level = 3; break;
+                      case 'Silver': level = 2; break;
+                      case 'Bronze': level = 1; break;
+                      default: level = 1;
+                    }
+                  } else if (typeof badgeData === 'number') {
+                    // Direct number
+                    level = badgeData;
+                  }
+                  
+                  // Add to the appropriate category
+                  badgeCategories[category].push({
+                    name: badgeName,
+                    level: level
+                  });
+                });
+                
+                // Sort badges by level within each category
+                Object.keys(badgeCategories).forEach(category => {
+                  badgeCategories[category].sort((a, b) => b.level - a.level);
+                });
+                
+                // Render categories that have badges
+                return Object.entries(badgeCategories)
+                  .filter(([_, badges]) => badges.length > 0)
+                  .map(([category, categoryBadges]) => (
+                    <div key={category} className="bg-gray-800/80 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                      <h4 className="text-sm sm:text-base font-medium text-blue-300 mb-2">{category}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {categoryBadges.map(badge => {
+                          // Badge level colors
+                          const levelColors = {
+                            1: "bg-gradient-to-r from-amber-800 to-amber-700 border-amber-700/70", // Bronze
+                            2: "bg-gradient-to-r from-slate-400 to-slate-500 border-slate-300/70", // Silver
+                            3: "bg-gradient-to-r from-yellow-500 to-yellow-600 border-yellow-400/70", // Gold
+                            4: "bg-gradient-to-r from-purple-600 to-purple-700 border-purple-500/70" // HoF (purple)
+                          };
+                          
+                          const levelNames = {
+                            1: "Bronze",
+                            2: "Silver",
+                            3: "Gold",
+                            4: "HoF"
+                          };
+                          
+                          const colorClass = levelColors[badge.level] || "bg-gradient-to-r from-gray-600 to-gray-700 border-gray-500/70";
+                          
+                          return (
+                            <div 
+                              key={badge.name} 
+                              className={`${colorClass} text-white text-xs rounded-lg px-2 py-1.5 border flex items-center justify-between shadow-md transform transition-transform duration-200 hover:scale-[1.02]`}
+                            >
+                              <span className="truncate">{badge.name}</span>
+                              <span className="ml-1 text-xs font-bold opacity-90">{levelNames[badge.level] || badge.level}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+              })()}
+            </div>
+          </div>
+      
+          {/* Attributes Section with Mobile Optimization */}
+          <div className="bg-gradient-to-br from-gray-700/70 to-gray-800/70 rounded-2xl p-4 sm:p-5 shadow-lg border border-gray-600/40 transform transition-transform duration-300 hover:scale-[1.01]">
+            <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-blue-300">Attributes</h3>
+              <button 
+                onClick={() => setShowAllAttributes(!showAllAttributes)}
+                className="text-xs sm:text-sm bg-blue-800/60 hover:bg-blue-700/70 text-blue-300 border border-blue-700/40 rounded-lg px-3 py-1.5 transition-colors duration-200"
+              >
+                {showAllAttributes ? 'Show Top Only' : 'Show All'}
+              </button>
+            </div>
+            
+            <div className="space-y-4 sm:space-y-5">
+              {Object.entries(attributeCategories).map(([category, attributes]) => {
+                // Filter attributes that exist in buildData
+                const categoryAttributes = attributes
+                  .filter(attr => buildData[attr] !== undefined)
+                  .sort((a, b) => buildData[b] - buildData[a]);
+                
+                // Skip category if no attributes exist
+                if (categoryAttributes.length === 0) return null;
+                
+                // For non-full view, show only top 3 attributes per category
+                const attrsToShow = showAllAttributes 
+                  ? categoryAttributes 
+                  : categoryAttributes.slice(0, 3);
+                
+                return (
+                  <div key={category} className="bg-gray-800/80 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                    <h4 className="text-sm sm:text-base font-medium text-blue-300 mb-3">{category}</h4>
+                    <div className="space-y-3">
+                      {attrsToShow.map(attr => 
+                        renderAttributeBar(formatAttributeName(attr), formatAttributeValue(buildData[attr]))
+                      )}
+                      {!showAllAttributes && categoryAttributes.length > 3 && (
+                        <div className="text-xs text-gray-400 text-right mt-2">
+                          +{categoryAttributes.length - 3} more attributes
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
-        
-        <div className="flex flex-wrap mt-2 sm:mt-3">
-          {determineArchetypes().map(archetype => (
-            <span key={archetype} className="text-xs mr-2 mb-1 px-2 py-1 bg-blue-900/40 rounded-full text-blue-300 border border-blue-800">
-              {archetype}
-            </span>
-          ))}
-        </div>
-        
-        {/* Build Description */}
-        {buildDescription && (
-          <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-900/20 border border-blue-800/50 rounded-md text-xs sm:text-sm text-blue-200">
-            {buildDescription}
-          </div>
-        )}
-      </div>
-
-      {/* Badge Section with Mobile Optimization - Show ALL badges */}
-      {Object.keys(badges).length > 0 && (
-        <div className="mb-4 sm:mb-6">
-          <div className="flex justify-between items-center mb-2 sm:mb-3">
-            <h3 className="text-base sm:text-lg font-semibold text-blue-300">Badges</h3>
-          </div>
-          
-          <div className="space-y-3">
-            {/* Process all badges */}
-            {(() => {
-              // Create a categorized structure for badges
-              const badgeCategories = {
-                'Finishing': [],
-                'Shooting': [],
-                'Playmaking': [],
-                'Defense': [],
-                'Other': []
-              };
-              
-              // Process badges into categories
-              Object.entries(badges).forEach(([badgeName, badgeData]) => {
-                // Check if it's a complex object with category or just a level string
-                let category = 'Other';
-                let level = 1;
-                
-                if (typeof badgeData === 'object' && badgeData !== null) {
-                  // Handle object format (from API)
-                  if (badgeData.category) {
-                    const cat = badgeData.category.charAt(0).toUpperCase() + badgeData.category.slice(1);
-                    if (badgeCategories[cat] !== undefined) {
-                      category = cat;
-                    } else if (cat === 'Inside Scoring') {
-                      category = 'Finishing';
-                    } else if (cat === 'Outside Scoring') {
-                      category = 'Shooting';
-                    }
-                  }
-                  
-                  // Get the level
-                  if (badgeData.level) {
-                    if (typeof badgeData.level === 'string') {
-                      // Convert string level to number
-                      switch (badgeData.level) {
-                        case 'Hall of Fame': level = 4; break;
-                        case 'Gold': level = 3; break;
-                        case 'Silver': level = 2; break;
-                        case 'Bronze': level = 1; break;
-                        default: level = 1;
-                      }
-                    } else {
-                      level = badgeData.level;
-                    }
-                  }
-                } else if (typeof badgeData === 'string') {
-                  // Handle string format
-                  switch (badgeData) {
-                    case 'Hall of Fame': level = 4; break;
-                    case 'Gold': level = 3; break;
-                    case 'Silver': level = 2; break;
-                    case 'Bronze': level = 1; break;
-                    default: level = 1;
-                  }
-                } else if (typeof badgeData === 'number') {
-                  // Direct number
-                  level = badgeData;
-                }
-                
-                // Add to the appropriate category
-                badgeCategories[category].push({
-                  name: badgeName,
-                  level: level
-                });
-              });
-              
-              // Sort badges by level within each category
-              Object.keys(badgeCategories).forEach(category => {
-                badgeCategories[category].sort((a, b) => b.level - a.level);
-              });
-              
-              // Render categories that have badges
-              return Object.entries(badgeCategories)
-                .filter(([_, badges]) => badges.length > 0)
-                .map(([category, categoryBadges]) => (
-                  <div key={category} className="bg-gray-700/50 rounded-lg border border-gray-600/50 p-2 sm:p-3">
-                    <h4 className="text-sm sm:text-base font-medium text-blue-300 mb-2">{category}</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {categoryBadges.map(badge => {
-                        // Badge level colors
-                        const levelColors = {
-                          1: "bg-gray-500 border-gray-400",
-                          2: "bg-blue-600 border-blue-500",
-                          3: "bg-purple-600 border-purple-500",
-                          4: "bg-yellow-500 border-yellow-400"
-                        };
-                        
-                        const levelNames = {
-                          1: "Bronze",
-                          2: "Silver",
-                          3: "Gold",
-                          4: "HoF"
-                        };
-                        
-                        const colorClass = levelColors[badge.level] || "bg-gray-600 border-gray-500";
-                        
-                        return (
-                          <div 
-                            key={badge.name} 
-                            className={`${colorClass} text-white text-xs rounded px-2 py-1 border flex items-center justify-between`}
-                          >
-                            <span className="truncate">{badge.name}</span>
-                            <span className="ml-1 text-xs font-bold">{levelNames[badge.level] || badge.level}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ));
-            })()}
-          </div>
-        </div>
       )}
-      
-      {/* Attributes Section with Mobile Optimization */}
-      <div>
-        <div className="flex justify-between items-center mb-2 sm:mb-3">
-          <h3 className="text-base sm:text-lg font-semibold text-blue-300">Attributes</h3>
-          <button 
-            onClick={() => setShowAllAttributes(!showAllAttributes)}
-            className="text-xs sm:text-sm bg-blue-900/50 hover:bg-blue-800/60 text-blue-300 border border-blue-800/30 rounded px-2 py-1"
-          >
-            {showAllAttributes ? 'Show Top Only' : 'Show All'}
-          </button>
-        </div>
-        
-        <div className="space-y-3 sm:space-y-4">
-          {Object.entries(attributeCategories).map(([category, attributes]) => {
-            // Filter attributes that exist in buildData
-            const categoryAttributes = attributes
-              .filter(attr => buildData[attr] !== undefined)
-              .sort((a, b) => buildData[b] - buildData[a]);
-            
-            // Skip category if no attributes exist
-            if (categoryAttributes.length === 0) return null;
-            
-            // For non-full view, show only top 3 attributes per category
-            const attrsToShow = showAllAttributes 
-              ? categoryAttributes 
-              : categoryAttributes.slice(0, 3);
-            
-            return (
-              <div key={category} className="bg-gray-700/50 rounded-lg border border-gray-600/50 p-2 sm:p-3">
-                <h4 className="text-sm sm:text-base font-medium text-blue-300 mb-2">{category}</h4>
-                <div className="space-y-2">
-                  {attrsToShow.map(attr => 
-                    renderAttributeBar(formatAttributeName(attr), formatAttributeValue(buildData[attr]))
-                  )}
-                  {!showAllAttributes && categoryAttributes.length > 3 && (
-                    <div className="text-xs text-gray-400 text-right mt-1">
-                      +{categoryAttributes.length - 3} more attributes
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 } 
